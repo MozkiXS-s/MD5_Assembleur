@@ -13,186 +13,182 @@ _start:
     xor rdi, rdi ; status 0
     syscall
 
-; Fonction de calcul de Hash (basée sur MD5 mais modifiée)
 compute_hash:
-    cld ; Effacer le drapeau de direction
+    cld
 
     ; Sauvegarde des registres
-    push    rax
-    push    rbx
-    push    rcx
-    push    rdx
-    push    rsi
-    push    rdi
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
 
-    mov     [longueur_message], cx ; Stocker la longueur du message
+    mov [longueur_message], cx
 
     ; Calcul du nombre de blocs de 64 octets
-    mov     rbx, rcx
-    shr     rbx, 6
-    mov     [numero_blocs_octets_fin], rbx
-    mov     [nombre_blocs], rbx
-    inc     qword [nombre_blocs] ; Incrémenter le nombre de blocs
+    mov rbx, rcx
+    shr rbx, 6
+    mov [numero_blocs_octets_fin], rbx
+    mov [nombre_blocs], rbx
+    inc qword [nombre_blocs]
 
     ; Copier les octets restants
-    shl     rbx, 6
-    add     rsi, rbx
-    and     cx, 0x3f
-    mov     rdi, octets_fin
-    rep movsb ; Répéter la copie de cx octets de rsi vers rdi
+    shl rbx, 6
+    add rsi, rbx
+    and cx, 0x3f
+    mov rdi, octets_fin
+    rep movsb
 
-    ; Ajouter le bit 1 à la fin du message
-    mov     al, 0x80
-    stosb ; Stocker al à l'adresse de rdi
-
-    ; Remplir avec des bits 0 jusqu'à 56 octets restants
-    sub     cx, 55
-    neg     cx
-    jge     add_padding
-    add     cx, 64
-    inc     qword [nombre_blocs]
-add_padding:
-    xor     eax, eax
-
-    ; Ajouter la longueur du message en bits à la fin
-    mov     rax, [longueur_message]
-    shl     rax, 3
-    mov     rcx, 8
-store_message_len:
+    ; Ajouter le bit 1 et padding
+    mov al, 0x80
     stosb
-    shr     rax, 8
-    dec     rcx
-    jnz     store_message_len
+    sub cx, 55
+    neg cx
+    jge ajouter_padding
+    add cx, 64
+    inc qword [nombre_blocs]
+ajouter_padding:
+    xor eax, eax
+
+    ; Ajouter la longueur du message en bits
+    mov rax, [longueur_message]
+    shl rax, 3
+    mov rcx, 8
+stocker_longueur_message:
+    stosb
+    shr rax, 8
+    dec rcx
+    jnz stocker_longueur_message
 
     ; Initialiser les valeurs de hachage
-    pop     rdi
-    mov     rax, INIT_A
-    mov     [hash_a], rax
-    mov     rax, INIT_B
-    mov     [hash_b], rax
-    mov     rax, INIT_C
-    mov     [hash_c], rax
-    mov     rax, INIT_D
-    mov     [hash_d], rax
+    pop rdi
+    mov rax, INIT_A
+    mov [hash_a], rax
+    mov rax, INIT_B
+    mov [hash_b], rax
+    mov rax, INIT_C
+    mov [hash_c], rax
+    mov rax, INIT_D
+    mov [hash_d], rax
 
-block_loop:
-    push    rcx
-    cmp     cx, [numero_blocs_octets_fin]
-    jne     backup_abcd
-    mov     rsi, octets_fin ; Utiliser les octets finaux pour les derniers blocs
-backup_abcd:
-    ; Sauvegarder les valeurs actuelles des variables de hachage
-    push    qword [hash_d]
-    push    qword [hash_c]
-    push    qword [hash_b]
-    push    qword [hash_a]
-    xor     rcx, rcx
-    xor     rax, rax
-main_loop:
-    push    rcx
-    mov     ax, cx
-    shr     ax, 4 ; Diviser cx par 16
-    test    al, al
-    jz      pass0
-    cmp     al, 1
-    je      pass1
-    cmp     al, 2
-    je      pass2
+boucle_bloc:
+    push rcx
+    cmp cx, [numero_blocs_octets_fin]
+    jne sauvegarder_abcd
+    mov rsi, octets_fin
+sauvegarder_abcd:
+    push qword [hash_d]
+    push qword [hash_c]
+    push qword [hash_b]
+    push qword [hash_a]
+    xor rcx, rcx
+    xor rax, rax
+boucle_principale:
+    push rcx
+    mov ax, cx
+    shr ax, 4
+    test al, al
+    jz transfo0
+    cmp al, 1
+    je transfo1
+    cmp al, 2
+    je transfo2
 
-    ; Pass3
-    mov     rax, [hash_c]
-    mov     rbx, [hash_d]
-    not     rbx
-    or      rbx, [hash_b]
-    xor     rax, rbx
-    jmp     do_rotate
+    ; transfo3
+    mov rax, [hash_c]
+    mov rbx, [hash_d]
+    not rbx
+    or rbx, [hash_b]
+    xor rax, rbx
+    jmp effectuer_rotation
 
-pass0:
+transfo0:
     ; Transformation F
-    mov     rax, [hash_b]
-    mov     rbx, rax
-    and     rax, [hash_c]
-    not     rbx
-    and     rbx, [hash_d]
-    or      rax, rbx
-    jmp     do_rotate
+    mov rax, [hash_b]
+    mov rbx, rax
+    and rax, [hash_c]
+    not rbx
+    and rbx, [hash_d]
+    or rax, rbx
+    jmp effectuer_rotation
 
-pass1:
+transfo1:
     ; Transformation G
-    mov     rax, [hash_d]
-    mov     rdx, rax
-    and     rax, [hash_b]
-    not     rdx
-    and     rdx, [hash_c]
-    or      rax, rdx
-    jmp     do_rotate
+    mov rax, [hash_d]
+    mov rdx, rax
+    and rax, [hash_b]
+    not rdx
+    and rdx, [hash_c]
+    or rax, rdx
+    jmp effectuer_rotation
 
-pass2:
+transfo2:
     ; Transformation H
-    mov     rax, [hash_b]
-    xor     rax, [hash_c]
-    xor     rax, [hash_d]
+    mov rax, [hash_b]
+    xor rax, [hash_c]
+    xor rax, [hash_d]
 
-do_rotate:
+effectuer_rotation:
     ; Ajout de diverses constantes et valeurs
-    add     rax, [hash_a]
-    mov     bx, cx
-    shl     bx, 1
-    mov     bx, [TABLEAU_INDEX_TAMPON + rbx]
-    add     rax, [rsi + rbx]
-    mov     bx, cx
-    shl     bx, 2
-    add     rax, qword [TABLEAU_T + rbx]
-    mov     bx, cx
-    ror     bx, 2
-    shr     bl, 2
-    rol     bx, 2
-    mov     cl, [VALEURS_ROTATION + rbx]
-    rol     rax, cl
-    add     rax, [hash_b]
+    add rax, [hash_a]
+    mov bx, cx
+    shl bx, 1
+    mov bx, [TABLEAU_INDEX_TAMPON + rbx]
+    add rax, [rsi + rbx]
+    mov bx, cx
+    shl bx, 2
+    add rax, qword [TABLEAU_T + rbx]
+    mov bx, cx
+    ror bx, 2
+    shr bl, 2
+    rol bx, 2
+    mov cl, [VALEURS_ROTATION + rbx]
+    rol rax, cl
+    add rax, [hash_b]
 
     ; Mise à jour des valeurs de hachage
-    push    rax
-    push    qword [hash_b]
-    push    qword [hash_c]
-    push    qword [hash_d]
-    pop     qword [hash_a]
-    pop     qword [hash_d]
-    pop     qword [hash_c]
-    pop     qword [hash_b]
-    pop     rcx
-    inc     cx
-    cmp     cx, 64
-    jb      main_loop
+    push rax
+    push qword [hash_b]
+    push qword [hash_c]
+    push qword [hash_d]
+    pop qword [hash_a]
+    pop qword [hash_d]
+    pop qword [hash_c]
+    pop qword [hash_b]
+    pop rcx
+    inc cx
+    cmp cx, 64
+    jb boucle_principale
 
     ; Ajouter aux valeurs originales
-    pop     rax
-    add     [hash_a], rax
-    pop     rax
-    add     [hash_b], rax
-    pop     rax
-    add     [hash_c], rax
-    pop     rax
-    add     [hash_d], rax
+    pop rax
+    add [hash_a], rax
+    pop rax
+    add [hash_b], rax
+    pop rax
+    add [hash_c], rax
+    pop rax
+    add [hash_d], rax
 
     ; Avancer les pointeurs
-    add     rsi, 64
-    pop     rcx
-    inc     cx
-    cmp     cx, [nombre_blocs]
-    jne     block_loop
+    add rsi, 64
+    pop rcx
+    inc cx
+    cmp cx, [nombre_blocs]
+    jne boucle_bloc
 
     ; Stocker le résultat final
-    mov     cx, 4
-    mov     rsi, hash_a
-    pop     rdi
-    rep movsq ; Copier les résultats finaux dans le tampon de sortie
-    pop     rdi
-    pop     rsi
-    pop     rdx
-    pop     rcx
-    pop     rbx
-    pop     rax
+    mov cx, 4
+    mov rsi, hash_a
+    pop rdi
+    rep movsq
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
     ret
 
 section .data
