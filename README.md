@@ -18,3 +18,8 @@ Pour compiler le code, utilisez `nasm` et `ld` :
 ```sh
 nasm -f elf64 md5.asm -o md5.o
 ld md5.o -o md5
+```
+## Execution 
+```sh 
+./md5
+```
