@@ -1,4 +1,4 @@
-# MD5 Assembleur
+# MD5 Assembleur by Rizki Mohamed 3SI3
 
 Ce projet essaye d'implémenter un algorithme de hachage MD5 en assembleur.
 
