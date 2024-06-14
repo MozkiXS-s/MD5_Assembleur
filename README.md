@@ -1,6 +1,6 @@
 # MD5 Assembleur
 
-Ce projet implémente un algorithme de hachage MD5 en assembleur. Le code est conçu pour fonctionner sur des systèmes Linux x86_64.
+Ce projet essaye d'implémenter un algorithme de hachage MD5 en assembleur.
 
 ## Description
 
